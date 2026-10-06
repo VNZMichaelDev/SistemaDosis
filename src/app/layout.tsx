@@ -6,13 +6,20 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'DEPos',
   description: 'Sistema de punto de venta DePOS Dosis',
-  icons: { icon: '/favicon.svg' },
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },
+  appleWebApp: {
+    capable: true,
+    title: 'Dosis',
+    statusBarStyle: 'default',
+  },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#1a1a1a',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
