@@ -1,0 +1,13 @@
+// Importa todos los módulos de handlers (registran sus rutas al importarse)
+import './handlers/core'
+import './handlers/usuarios'
+import './handlers/pedidos'
+import './handlers/ventas'
+import './handlers/productos'
+import './handlers/reportes'
+import './handlers/creditos'
+import './handlers/facturas'
+import './handlers/vendedores'
+import './handlers/ingredientes'
+import './handlers/recetas'
+import './handlers/proveedores'

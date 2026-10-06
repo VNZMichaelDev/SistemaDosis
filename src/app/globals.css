@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-depo-bg: #f5f4f0;
+  --color-depo-dark: #1a1a1a;
+  --color-depo-dark-2: #2e2e2e;
+  --color-depo-dark-3: #242424;
+  --color-depo-dark-4: #2a2a2a;
+  --color-depo-dark-5: #111111;
+  --color-depo-dark-6: #1e1e1e;
+  --color-depo-dark-7: #444444;
+  --color-depo-yellow: #f2b705;
+  --color-depo-border: #e8e6df;
+  --color-depo-border-2: #e0ded8;
+  --color-depo-input: #eceae3;
+  --color-depo-gray: #888888;
+  --color-depo-gray-2: #666666;
+  --color-depo-gray-3: #aaaaaa;
+  --color-depo-gray-4: #f1efe8;
+  --color-depo-gray-5: #555555;
+  --color-depo-gray-6: #999999;
+  --color-depo-gray-7: #aaaaaa;
+  --color-depo-table-header: #fafaf8;
+  --color-dosis-yellow: #f2b705;
+  --color-dosis-green-dark: #1e3a2f;
+
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-fadeIn: fadeIn 0.2s ease;
+  --animate-bounce-in: bounce-in 0.3s ease;
+
+  @keyframes slide-up {
+    0% {
+      transform: translateY(100%);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes bounce-in {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.02);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #f5f4f0;
+  color: #171717;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f0ede6;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #d4d0c4;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #b8b2a0;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
