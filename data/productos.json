@@ -1,0 +1,40 @@
+[
+  { "departamento": "Cachapas", "productos": [
+    { "codigo": "C01", "nombre": "Cachapa Sencilla", "precio": 2.76 },
+    { "codigo": "C02", "nombre": "Cachapa T.Q.J", "precio": 4.08 },
+    { "codigo": "C03", "nombre": "Cachapa Fundido", "precio": 5.41 },
+    { "codigo": "C04", "nombre": "Cachapa con Cochino", "precio": 6.16 },
+    { "codigo": "C05", "nombre": "Cachapa Viuda", "precio": 0.78 },
+    { "codigo": "C06", "nombre": "Cachapa Pelua", "precio": 1.00 },
+    { "codigo": "C07", "nombre": "Cachapa Con Jamon", "precio": 1.00 },
+    { "codigo": "C08", "nombre": "Extra Queso", "precio": 1.00 }
+  ]},
+  { "departamento": "Hamburguesas", "productos": [
+    { "codigo": "H01", "nombre": "Hamburguesa", "precio": 3.56 },
+    { "codigo": "H02", "nombre": "Hamburguesa T.Q.J", "precio": 4.76 },
+    { "codigo": "H03", "nombre": "Hamburguesa de Mano", "precio": 6.00 }
+  ]},
+  { "departamento": "Perros Calientes", "productos": [
+    { "codigo": "P01", "nombre": "Perro Caliente Normal", "precio": 1.39 },
+    { "codigo": "P02", "nombre": "Perro T.Q.J", "precio": 3.00 },
+    { "codigo": "P03", "nombre": "Perro Fundido", "precio": 3.30 },
+    { "codigo": "P04", "nombre": "Perro Cachapero", "precio": 3.50 }
+  ]},
+  { "departamento": "Papas y Frituras", "productos": [
+    { "codigo": "PA01", "nombre": "Papas Fritas", "precio": 1.60 },
+    { "codigo": "PA02", "nombre": "Papas Carnicera", "precio": 5.00 },
+    { "codigo": "PA03", "nombre": "Salchi Papas", "precio": 1.78 }
+  ]},
+  { "departamento": "Batidos", "productos": [
+    { "codigo": "B01", "nombre": "Batidos Naturales", "precio": 1.09 }
+  ]},
+  { "departamento": "Bebidas", "productos": [
+    { "codigo": "R01", "nombre": "Refresco 300 ml", "precio": 0.72 },
+    { "codigo": "R02", "nombre": "Refresco 1 L", "precio": 1.41 },
+    { "codigo": "R03", "nombre": "Refresco 1.25 L", "precio": 1.55 },
+    { "codigo": "R04", "nombre": "Refresco 1.5 L", "precio": 1.85 },
+    { "codigo": "R05", "nombre": "Refresco 2 L", "precio": 2.30 },
+    { "codigo": "R06", "nombre": "Malta", "precio": 0.72 },
+    { "codigo": "R07", "nombre": "Agua", "precio": 1.00 }
+  ]}
+]
