@@ -65,56 +65,9 @@ async function main() {
     console.log(`OK mesas (${nombres.length})`)
   }
 
-  // 4) Departamentos y productos reales (data/productos.json)
-  const dataFile = path.join(process.cwd(), 'data', 'productos.json')
-  const grupos = JSON.parse(fs.readFileSync(dataFile, 'utf-8')) as {
-    departamento: string
-    productos: { codigo: string; nombre: string; precio: number }[]
-  }[]
+  // 4) Departamentos y productos: npm run seed:productos (catálogo original del POS)
 
-  const { data: depsExistentes, error: eDeps } = await db.from('departamentos').select('id, nombre')
-  if (eDeps) throw new Error(`departamentos: ${eDeps.message}`)
-
-  const faltantes = grupos.map((g) => g.departamento).filter((n) => !depsExistentes?.some((d) => d.nombre === n))
-  if (faltantes.length > 0) {
-    const { error } = await db.from('departamentos').insert(faltantes.map((nombre) => ({ nombre, descripcion: '' })))
-    if (error) throw new Error(`departamentos: ${error.message}`)
-    console.log(`OK departamentos nuevos (${faltantes.length})`)
-  } else {
-    console.log('OK departamentos (ya presentes)')
-  }
-
-  const { data: deps, error: eDeps2 } = await db.from('departamentos').select('id, nombre')
-  if (eDeps2) throw new Error(`departamentos: ${eDeps2.message}`)
-
-  const { data: prodsExistentes, error: eProds } = await db.from('productos').select('codigo')
-  if (eProds) throw new Error(`productos: ${eProds.message}`)
-  const existentes = new Set(prodsExistentes?.map((p) => p.codigo))
-
-  const nuevos: any[] = []
-  for (const g of grupos) {
-    const departamento_id = deps?.find((d) => d.nombre === g.departamento)?.id ?? null
-    for (const p of g.productos) {
-      if (existentes.has(p.codigo)) continue
-      nuevos.push({
-        codigo: p.codigo,
-        nombre: p.nombre,
-        precio_usd: p.precio,
-        tipo: 'unidad',
-        departamento_id,
-      })
-    }
-  }
-
-  if (nuevos.length > 0) {
-    const { error } = await db.from('productos').insert(nuevos)
-    if (error) throw new Error(`productos: ${error.message}`)
-    console.log(`OK productos (${nuevos.length} insertados)`)
-  } else {
-    console.log('OK productos (ya presentes)')
-  }
-
-  console.log('\nSeed completado.')
+  console.log('\nSeed completado. Para el catálogo: npm run seed:productos')
 }
 
 main().catch((e) => {

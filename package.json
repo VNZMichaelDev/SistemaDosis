@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
-    "reset": "tsx scripts/reset.ts"
+    "seed:productos": "tsx scripts/seed-productos.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
