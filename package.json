@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
-    "seed:productos": "tsx scripts/seed-productos.ts"
+    "seed:productos": "tsx scripts/seed-productos.ts",
+    "import:sqlite": "tsx scripts/import-sqlite.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
