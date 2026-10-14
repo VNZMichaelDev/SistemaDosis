@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed:productos": "tsx scripts/seed-productos.ts",
     "import:sqlite": "tsx scripts/import-sqlite.ts",
-    "import:creditos": "tsx scripts/import-creditos.ts"
+    "import:creditos": "tsx scripts/import-creditos.ts",
+    "import:proveedores": "tsx scripts/import-proveedores.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
