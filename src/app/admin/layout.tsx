@@ -20,7 +20,9 @@ const navItems = [
   { to: '/admin/ingredientes', label: 'Ingredientes', icon: LeafIcon },
   { to: '/admin/recetas', label: 'Recetas', icon: RecipeIcon },
   { to: '/admin/vendedores', label: 'Vendedores', icon: SellerIcon },
+  { to: '/admin/empleados', label: 'Empleados', icon: PeopleIcon },
   { to: '/admin/creditos', label: 'Créditos', icon: CreditIcon },
+  { to: '/admin/contabilidad', label: 'Contabilidad', icon: LedgerIcon },
   { to: '/admin/usuarios', label: 'Usuarios', icon: UsersIcon },
   { to: '/admin/config', label: 'Tasa $', icon: SettingsIcon },
   { to: '/admin/reportes', label: 'Reportes', icon: ReportsIcon },
@@ -258,6 +260,47 @@ function SellerIcon({ className }: { className?: string }) {
       <circle cx="7.5" cy="5" r="3" />
       <path d="M2.5 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" />
       <path d="M10 3l2 2M13 3l-2 2" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function PeopleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="5.5" cy="5" r="2.2" />
+      <path d="M1.5 12.5c0-2.2 1.8-4 4-4s4 1.8 4 4" />
+      <circle cx="11" cy="5.5" r="1.8" />
+      <path d="M10.5 8.8c1.8.2 3 1.8 3 3.7" />
+    </svg>
+  )
+}
+
+function LedgerIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="1.5" width="11" height="12" rx="1.5" />
+      <path d="M5 1.5v12" />
+      <path d="M7.5 4.5h3.5M7.5 7h3.5M7.5 9.5h2" />
     </svg>
   )
 }

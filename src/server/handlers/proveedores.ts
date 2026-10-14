@@ -14,6 +14,11 @@ const schemaFactura = z.object({
   numero_factura: z.string().optional().default(''),
   monto_total: z.number().nonnegative(),
   descripcion: z.string().optional().default(''),
+  categoria: z.enum(['compra', 'gasto']).optional().default('compra'),
+  fecha_documento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 })
 
 // ==================== PROVEEDORES ====================
@@ -124,6 +129,8 @@ post(
         numero_factura: parsed.data.numero_factura,
         monto_total: parsed.data.monto_total,
         descripcion: parsed.data.descripcion,
+        categoria: parsed.data.categoria,
+        fecha_documento: parsed.data.fecha_documento,
       })
       .select('id')
       .single()
@@ -146,6 +153,8 @@ put(
         numero_factura: parsed.data.numero_factura,
         monto_total: parsed.data.monto_total,
         descripcion: parsed.data.descripcion,
+        categoria: parsed.data.categoria,
+        fecha_documento: parsed.data.fecha_documento,
       })
       .eq('id', id)
       .select('id')

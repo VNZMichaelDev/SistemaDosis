@@ -6,6 +6,8 @@ import { apiFetch } from '@/lib/api-client';
 
 function formatBS(n: any) { const [i, d] = Number(n || 0).toFixed(2).split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d; }
 
+function ymd(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
 export default function FacturasProveedor() {
   const { id } = useParams();
   const router = useRouter();
@@ -19,6 +21,8 @@ export default function FacturasProveedor() {
   const [formNum, setFormNum] = useState('');
   const [formMonto, setFormMonto] = useState('');
   const [formDesc, setFormDesc] = useState('');
+  const [formCategoria, setFormCategoria] = useState('compra');
+  const [formFecha, setFormFecha] = useState(ymd(new Date()));
   const [saving, setSaving] = useState(false);
 
   const [openPago, setOpenPago] = useState(false);
@@ -56,6 +60,8 @@ export default function FacturasProveedor() {
     setFormNum('');
     setFormMonto('');
     setFormDesc('');
+    setFormCategoria('compra');
+    setFormFecha(ymd(new Date()));
     setOpenFactura(true);
   }
 
@@ -64,6 +70,8 @@ export default function FacturasProveedor() {
     setFormNum(f.numero_factura || '');
     setFormMonto(String(f.monto_total));
     setFormDesc(f.descripcion || '');
+    setFormCategoria(f.categoria || 'compra');
+    setFormFecha(f.fecha_documento ? String(f.fecha_documento).slice(0, 10) : ymd(new Date()));
     setOpenFactura(true);
   }
 
@@ -74,7 +82,13 @@ export default function FacturasProveedor() {
     setSaving(true);
     setError('');
     try {
-      const body = { numero_factura: formNum.trim(), monto_total: monto, descripcion: formDesc.trim() };
+      const body = {
+        numero_factura: formNum.trim(),
+        monto_total: monto,
+        descripcion: formDesc.trim(),
+        categoria: formCategoria,
+        fecha_documento: formFecha,
+      };
       if (editFactura) {
         await apiFetch(`/api/proveedores/facturas/${editFactura.id}`, { method: 'PUT', body });
       } else {
@@ -200,6 +214,7 @@ export default function FacturasProveedor() {
               <thead>
                 <tr>
                   <th className="text-left text-[11px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 md:px-6 py-3 bg-depo-table-header border-b border-[#F0EDE6]"># Factura</th>
+                  <th className="text-left text-[11px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 md:px-6 py-3 bg-depo-table-header border-b border-[#F0EDE6]">Tipo</th>
                   <th className="text-left text-[11px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 md:px-6 py-3 bg-depo-table-header border-b border-[#F0EDE6]">Descripción</th>
                   <th className="text-right text-[11px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 md:px-6 py-3 bg-depo-table-header border-b border-[#F0EDE6]">Monto</th>
                   <th className="text-right text-[11px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 md:px-6 py-3 bg-depo-table-header border-b border-[#F0EDE6]">Pagado</th>
@@ -212,6 +227,13 @@ export default function FacturasProveedor() {
                 {facturas.map((f) => (
                   <tr key={f.id} className="border-b border-[#F5F3EE] hover:bg-depo-table-header transition-colors">
                     <td className="px-3 md:px-6 py-[14px] text-[13px] font-mono text-depo-dark font-medium">{f.numero_factura || `#${f.id}`}</td>
+                    <td className="px-3 md:px-6 py-[14px] text-[13px]">
+                      {f.categoria === 'gasto' ? (
+                        <span className="inline-block px-[10px] py-[3px] rounded text-[11px] font-medium tracking-wide bg-amber-50 text-amber-800">Gasto</span>
+                      ) : (
+                        <span className="inline-block px-[10px] py-[3px] rounded text-[11px] font-medium tracking-wide bg-emerald-50 text-emerald-700">Mercancía</span>
+                      )}
+                    </td>
                     <td className="px-3 md:px-6 py-[14px] text-[13px] text-depo-gray-2">{f.descripcion || <span className="text-[#CCC]">—</span>}</td>
                     <td className="px-3 md:px-6 py-[14px] text-[13px] text-depo-dark font-mono text-right">${Number(f.monto_total).toFixed(2)}</td>
                     <td className="px-3 md:px-6 py-[14px] text-[13px] text-green-700 font-mono text-right">${Number(f.monto_pagado).toFixed(2)}</td>
@@ -221,7 +243,7 @@ export default function FacturasProveedor() {
                       </span>
                     </td>
                     <td className="px-3 md:px-6 py-[14px] text-[11px] text-depo-gray-3 whitespace-nowrap">
-                      {new Date(f.fecha_registro).toLocaleDateString()}
+                      {f.fecha_documento ? String(f.fecha_documento).slice(0, 10) : new Date(f.fecha_registro).toLocaleDateString()}
                     </td>
                     <td className="px-3 md:px-6 py-[14px]">
                       <div className="flex gap-[6px] justify-end">
@@ -248,7 +270,7 @@ export default function FacturasProveedor() {
                   </tr>
                 ))}
                 {!loading && facturas.length === 0 && (
-                  <tr><td className="px-4 py-8 text-center text-sm text-depo-gray-3" colSpan={7}>Sin facturas registradas</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-sm text-depo-gray-3" colSpan={8}>Sin facturas registradas</td></tr>
                 )}
               </tbody>
             </table>
@@ -266,6 +288,21 @@ export default function FacturasProveedor() {
                 <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block"># Factura</label>
                 <input className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"
                   value={formNum} onChange={(e) => setFormNum(e.target.value)} placeholder="Número de factura (opcional)" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Tipo *</label>
+                  <select value={formCategoria} onChange={(e) => setFormCategoria(e.target.value)}
+                    className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans">
+                    <option value="compra">Mercancía (compra)</option>
+                    <option value="gasto">Gasto</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Fecha del documento</label>
+                  <input type="date" value={formFecha} onChange={(e) => setFormFecha(e.target.value)}
+                    className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans" />
+                </div>
               </div>
               <div>
                 <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Monto total (USD) *</label>
