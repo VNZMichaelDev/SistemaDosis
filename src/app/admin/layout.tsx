@@ -29,6 +29,7 @@ const navItems = [
   { to: '/pos', label: 'Tomar Pedido', icon: PosIcon },
   { to: '/pos/facturar', label: 'Facturar', icon: CashIcon },
   { to: '/admin/facturas', label: 'Facturas', icon: InvoiceIcon },
+  { to: '/admin/facturas-traslado', label: 'Traslados', icon: TransferIcon },
   { to: '/cocina', label: 'Cocina', icon: KitchenIcon },
 ]
 
@@ -161,6 +162,25 @@ function InvoiceIcon({ className }: { className?: string }) {
       <path d="M4 1.5h7l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1z" />
       <path d="M11 1.5v3h3" />
       <path d="M5.5 7.5h4M5.5 10h2.5" />
+    </svg>
+  )
+}
+
+function TransferIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1 4.5h9M7.5 2L10 4.5 7.5 7" />
+      <path d="M14 10.5H5M7.5 8L5 10.5 7.5 13" />
     </svg>
   )
 }
