@@ -34,6 +34,7 @@ export default function NuevaFacturaTrasladoPage() {
   const [notas, setNotas] = useState('')
   const [items, setItems] = useState<Item[]>([{ producto_id: null, descripcion: '', cantidad: '1', precio_unitario: '' }])
   const [productos, setProductos] = useState<any[]>([])
+  const [ingredientes, setIngredientes] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -41,7 +42,26 @@ export default function NuevaFacturaTrasladoPage() {
     apiFetch('/api/productos')
       .then((d) => setProductos(d.products || []))
       .catch(() => {})
+    apiFetch('/api/ingredientes')
+      .then((d) => setIngredientes(d.ingredientes || []))
+      .catch(() => {})
   }, [])
+
+  // Combina ingredientes + productos en una sola lista para el selector
+  const catalogo = [
+    ...ingredientes.map((ing) => ({
+      key: `ing-${ing.id}`,
+      nombre: `${ing.nombre} (${ing.unidad})`,
+      precio: ing.precio_unitario,
+      tipo: 'ingrediente' as const,
+    })),
+    ...productos.map((p) => ({
+      key: `prod-${p.id}`,
+      nombre: p.nombre,
+      precio: p.precio_costo > 0 ? p.precio_costo : p.precio_usd,
+      tipo: 'producto' as const,
+    })),
+  ]
 
   const subtotal = items.reduce((s, it) => s + importeDe(it), 0)
 
@@ -58,12 +78,24 @@ export default function NuevaFacturaTrasladoPage() {
     setItems(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   }
 
-  function pickProducto(i: number, productoId: string) {
-    if (!productoId) {
+  function pickProducto(i: number, key: string) {
+    if (!key) {
       updateItem(i, { producto_id: null })
       return
     }
-    const p = productos.find((x) => Number(x.id) === Number(productoId))
+    if (key.startsWith('ing-')) {
+      const ingId = Number(key.slice(4))
+      const ing = ingredientes.find((x) => Number(x.id) === ingId)
+      if (!ing) return
+      updateItem(i, {
+        producto_id: null,
+        descripcion: `${ing.nombre} (${ing.unidad})`,
+        precio_unitario: String(ing.precio_unitario || ''),
+      })
+      return
+    }
+    const prodId = Number(key.slice(5))
+    const p = productos.find((x) => Number(x.id) === prodId)
     if (!p) return
     updateItem(i, {
       producto_id: Number(p.id),
@@ -201,16 +233,29 @@ export default function NuevaFacturaTrasladoPage() {
                   <tr key={i} className="border-b border-[#F5F3EE]">
                     <td className="px-3 md:px-4 py-2">
                       <select
-                        value={it.producto_id ?? ''}
+                        value={it.producto_id != null ? `prod-${it.producto_id}` : (it.descripcion ? catalogo.find((c) => c.nombre === it.descripcion)?.key || '' : '')}
                         onChange={(e) => pickProducto(i, e.target.value)}
                         className="w-full border border-depo-border-2 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#E8E04A]"
                       >
                         <option value="">— Manual —</option>
-                        {productos.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nombre}
-                          </option>
-                        ))}
+                        {ingredientes.length > 0 ? (
+                          <optgroup label="Ingredientes">
+                            {ingredientes.map((ing) => (
+                              <option key={`ing-${ing.id}`} value={`ing-${ing.id}`}>
+                                {ing.nombre} ({ing.unidad})
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null}
+                        {productos.length > 0 ? (
+                          <optgroup label="Productos">
+                            {productos.map((p) => (
+                              <option key={`prod-${p.id}`} value={`prod-${p.id}`}>
+                                {p.nombre}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null}
                       </select>
                     </td>
                     <td className="px-3 md:px-4 py-2">
