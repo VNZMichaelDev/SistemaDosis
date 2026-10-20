@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase'
-import { apiError, del, get, json, post, VALIDATION } from '../router'
+import { apiError, del, get, json, notFound, post, VALIDATION } from '../router'
 
 const schemaItem = z.object({
   descripcion: z.string().min(1),
