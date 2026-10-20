@@ -238,6 +238,7 @@ export default function Ingredientes() {
                     <option value="ml">Mililitros</option>
                     <option value="unidad">Unidad</option>
                     <option value="docena">Docena</option>
+                    <option value="paquete">Paquete</option>
                   </select>
                 </div>
                 <div>

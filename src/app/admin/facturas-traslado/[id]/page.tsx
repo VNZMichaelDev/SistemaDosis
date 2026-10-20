@@ -24,20 +24,65 @@ export default function VerFacturaTrasladoPage() {
   const id = params?.id
   const [factura, setFactura] = useState<any>(null)
   const [items, setItems] = useState<any[]>([])
+  const [pagos, setPagos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [generandoPdf, setGenerandoPdf] = useState(false)
 
+  const [openPago, setOpenPago] = useState(false)
+  const [pagoMonto, setPagoMonto] = useState('')
+  const [pagoNotas, setPagoNotas] = useState('')
+  const [savingPago, setSavingPago] = useState(false)
+
+  async function cargarTodo() {
+    try {
+      const [d, pg] = await Promise.all([
+        apiFetch(`/api/facturas-traslado/${id}`),
+        apiFetch(`/api/facturas-traslado/${id}/pagos`).catch(() => ({ pagos: [] })),
+      ])
+      setFactura(d.factura)
+      setItems(d.items || [])
+      setPagos(pg.pagos || [])
+    } catch (e: any) {
+      setError(e?.data?.error || 'Error al cargar')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!id) return
-    apiFetch(`/api/facturas-traslado/${id}`)
-      .then((d) => {
-        setFactura(d.factura)
-        setItems(d.items || [])
-      })
-      .catch((e) => setError(e?.data?.error || 'Error al cargar'))
-      .finally(() => setLoading(false))
+    cargarTodo()
   }, [id])
+
+  const montoPagado = pagos.reduce((s, pg) => s + (Number(pg.monto) || 0), 0)
+  const saldoPendiente = (Number(factura?.total) || 0) - montoPagado
+
+  function abrirPago() {
+    setPagoMonto('')
+    setPagoNotas('')
+    setOpenPago(true)
+  }
+
+  async function submitPago(e: any) {
+    e.preventDefault()
+    const monto = Number(pagoMonto)
+    if (!monto || monto <= 0) return
+    setSavingPago(true)
+    setError('')
+    try {
+      await apiFetch(`/api/facturas-traslado/${id}/pagos`, {
+        method: 'POST',
+        body: { monto, notas: pagoNotas.trim() },
+      })
+      setOpenPago(false)
+      await cargarTodo()
+    } catch (e: any) {
+      setError(e?.data?.error === 'EXCEEDS_BALANCE' ? 'El monto excede el saldo pendiente' : (e?.data?.error || 'Error al registrar el abono'))
+    } finally {
+      setSavingPago(false)
+    }
+  }
 
   async function descargarPdf() {
     if (!factura) return
@@ -253,7 +298,7 @@ export default function VerFacturaTrasladoPage() {
             </tbody>
           </table>
 
-          <div className="flex justify-end gap-8 text-sm mb-8">
+          <div className="flex justify-end gap-8 text-sm mb-4">
             <div className="text-right">
               <div className="text-[11px] text-depo-gray-3 tracking-widest uppercase">Sub-Total</div>
               <div className="font-semibold font-mono">${fmt(factura.subtotal)}</div>
@@ -263,6 +308,21 @@ export default function VerFacturaTrasladoPage() {
               <div className="text-lg font-bold font-mono text-depo-dark">${fmt(factura.total)}</div>
             </div>
           </div>
+
+          {pagos.length > 0 || saldoPendiente < Number(factura.total) ? (
+            <div className="flex justify-end gap-8 text-sm mb-8">
+              <div className="text-right">
+                <div className="text-[11px] text-depo-gray-3 tracking-widest uppercase">Abonado</div>
+                <div className="font-semibold font-mono text-green-700">${fmt(montoPagado)}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[11px] text-depo-gray-3 tracking-widest uppercase">Saldo</div>
+                <div className={`font-bold font-mono ${saldoPendiente > 0 ? 'text-rose-600' : 'text-green-700'}`}>${fmt(saldoPendiente)}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8" />
+          )}
 
           {factura.notas ? (
             <div className="text-sm text-depo-gray-2 mb-6">
@@ -280,7 +340,84 @@ export default function VerFacturaTrasladoPage() {
             </div>
           </div>
         </div>
+
+        {/* Panel de abonos */}
+        <div className="bg-white border border-depo-border rounded-[10px] max-w-[720px] mx-auto mt-4 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-[13px] font-medium text-depo-dark">Abonos</div>
+              <div className="text-[11px] text-depo-gray-3 tracking-widest uppercase mt-[1px]">
+                {pagos.length} abono{pagos.length !== 1 ? 's' : ''} · Saldo pendiente:{' '}
+                <span className={saldoPendiente > 0 ? 'text-rose-600 font-medium' : 'text-green-700'}>${fmt(saldoPendiente)}</span>
+              </div>
+            </div>
+            {saldoPendiente > 0 ? (
+              <button
+                onClick={abrirPago}
+                className="bg-green-600 border-none text-white text-xs font-medium px-[14px] py-[6px] rounded transition-all hover:bg-green-700"
+              >
+                + Registrar abono
+              </button>
+            ) : null}
+          </div>
+          {pagos.length === 0 ? (
+            <div className="text-sm text-depo-gray-3 text-center py-4">Sin abonos registrados</div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left text-[10px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 py-2 bg-depo-table-header border-b border-[#F0EDE6]">Fecha</th>
+                  <th className="text-right text-[10px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 py-2 bg-depo-table-header border-b border-[#F0EDE6]">Monto</th>
+                  <th className="text-left text-[10px] font-medium text-depo-gray-3 tracking-widest uppercase px-3 py-2 bg-depo-table-header border-b border-[#F0EDE6]">Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagos.map((pg) => (
+                  <tr key={pg.id} className="border-b border-[#F5F3EE]">
+                    <td className="px-3 py-2 text-[12px] text-depo-dark">{new Date(pg.fecha_pago).toLocaleString()}</td>
+                    <td className="px-3 py-2 text-[12px] text-green-700 font-mono text-right">${Number(pg.monto).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-[12px] text-depo-gray-2">{pg.notas || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
+
+      {openPago && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setOpenPago(false)} />
+          <div className="relative bg-white rounded-xl w-[380px] max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="text-base font-medium text-depo-dark px-7 pt-7 pb-0 shrink-0">Registrar abono</div>
+            <div className="text-[11px] text-depo-gray-3 px-7 pt-1 shrink-0">
+              {factura?.numero} · Saldo: <span className="text-rose-600 font-medium">${fmt(saldoPendiente)}</span>
+            </div>
+            <form onSubmit={submitPago} className="space-y-[14px] overflow-y-auto px-7 py-5">
+              <div>
+                <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Monto (USD) *</label>
+                <input type="number" step="0.01" className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"
+                  value={pagoMonto} onChange={(e) => setPagoMonto(e.target.value)} placeholder="0.00" autoFocus />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Notas</label>
+                <input className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"
+                  value={pagoNotas} onChange={(e) => setPagoNotas(e.target.value)} placeholder="Referencia, método de pago..." />
+              </div>
+              <div className="flex gap-2 pt-2 justify-end">
+                <button type="button" onClick={() => setOpenPago(false)}
+                  className="bg-transparent border border-depo-border-2 text-[#666] px-[18px] py-[9px] rounded-md text-[13px] font-sans cursor-pointer hover:border-[#999]">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={savingPago || !Number(pagoMonto) || Number(pagoMonto) <= 0}
+                  className="bg-green-600 text-white border-none px-[22px] py-[9px] rounded-md text-[13px] font-medium font-sans cursor-pointer hover:bg-green-700 disabled:opacity-60">
+                  {savingPago ? 'Registrando...' : 'Registrar abono'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }

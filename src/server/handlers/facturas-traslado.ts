@@ -21,10 +21,17 @@ const schemaFactura = z.object({
 get('/facturas-traslado', async () => {
   const { data, error } = await supabaseAdmin()
     .from('facturas_traslado')
-    .select('id, numero, destinatario, direccion, rif, fecha, subtotal, total, notas, created_at')
+    .select('id, numero, destinatario, direccion, rif, fecha, subtotal, total, notas, created_at, pagos_traslado(monto)')
     .order('id', { ascending: false })
   if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
-  return json({ facturas: data })
+
+  const facturas = (data ?? []).map((ft: any) => {
+    const montoPagado = (ft.pagos_traslado ?? []).reduce((s: number, pg: any) => s + (Number(pg.monto) || 0), 0)
+    const rest = { ...ft }
+    delete rest.pagos_traslado
+    return { ...rest, monto_pagado: montoPagado, saldo_pendiente: (Number(ft.total) || 0) - montoPagado }
+  })
+  return json({ facturas })
 })
 
 post('/facturas-traslado', async ({ body, session }) => {
@@ -105,3 +112,76 @@ del('/facturas-traslado/:id', async ({ params, session }) => {
   if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
   return json({ ok: true })
 })
+
+// ==================== ABONOS / PAGOS ====================
+
+post(
+  '/facturas-traslado/:id/pagos',
+  async ({ params, body }) => {
+    const facturaId = Number(params.id)
+    if (!Number.isFinite(facturaId)) return apiError(400, 'BAD_REQUEST')
+    const schema = z.object({
+      monto: z.number().positive(),
+      notas: z.string().optional().default(''),
+    })
+    const parsed = schema.safeParse(body)
+    if (!parsed.success) return VALIDATION()
+
+    const db = supabaseAdmin()
+    const { data: factura, error: errFactura } = await db.from('facturas_traslado').select('*').eq('id', facturaId).maybeSingle()
+    if (errFactura) throw new Error(errFactura.message)
+    if (!factura) return notFound()
+
+    const { data: pagos, error: errPagos } = await db.from('pagos_traslado').select('monto').eq('factura_traslado_id', facturaId)
+    if (errPagos) throw new Error(errPagos.message)
+    const totalPagado = (pagos ?? []).reduce((s: number, pg: any) => s + (Number(pg.monto) || 0), 0)
+
+    if (totalPagado + parsed.data.monto > Number(factura.total) + 0.01) {
+      return apiError(400, 'EXCEEDS_BALANCE')
+    }
+
+    const { data, error } = await db
+      .from('pagos_traslado')
+      .insert({ factura_traslado_id: facturaId, monto: parsed.data.monto, notas: parsed.data.notas })
+      .select('id')
+      .single()
+    if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
+    return json({ id: data.id })
+  },
+  { roles: ['admin', 'encargado'] },
+)
+
+get(
+  '/facturas-traslado/:id/pagos',
+  async ({ params }) => {
+    const facturaId = Number(params.id)
+    if (!Number.isFinite(facturaId)) return apiError(400, 'BAD_REQUEST')
+    const { data, error } = await supabaseAdmin()
+      .from('pagos_traslado')
+      .select('*')
+      .eq('factura_traslado_id', facturaId)
+      .order('fecha_pago', { ascending: false })
+    if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
+    return json({ pagos: data ?? [] })
+  },
+  { roles: ['admin', 'encargado'] },
+)
+
+del(
+  '/facturas-traslado/:id/pagos/:pagoId',
+  async ({ params, session }) => {
+    if (session.rol !== 'admin') return apiError(403, 'FORBIDDEN')
+    const facturaId = Number(params.id)
+    const pagoId = Number(params.pagoId)
+    if (!Number.isFinite(facturaId) || !Number.isFinite(pagoId)) return apiError(400, 'BAD_REQUEST')
+    const { data, error } = await supabaseAdmin()
+      .from('pagos_traslado')
+      .delete()
+      .eq('id', pagoId)
+      .eq('factura_traslado_id', facturaId)
+      .select('id')
+    if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
+    return json({ deleted: data?.length ?? 0 })
+  },
+  { roles: ['admin'] },
+)
