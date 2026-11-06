@@ -19,6 +19,7 @@ const navItems = [
   { to: '/admin/proveedores', label: 'Proveedores', icon: TruckIcon },
   { to: '/admin/ingredientes', label: 'Ingredientes', icon: LeafIcon },
   { to: '/admin/recetas', label: 'Recetas', icon: RecipeIcon },
+  { to: '/admin/mermas', label: 'Mermas', icon: WasteIcon },
   { to: '/admin/vendedores', label: 'Vendedores', icon: SellerIcon },
   { to: '/admin/empleados', label: 'Empleados', icon: PeopleIcon },
   { to: '/admin/creditos', label: 'Créditos', icon: CreditIcon },
@@ -260,6 +261,17 @@ function RecipeIcon({ className }: { className?: string }) {
     >
       <rect x="2" y="1.5" width="11" height="12" rx="1" />
       <path d="M5 5h5M5 8h5M5 11h3" />
+    </svg>
+  )
+}
+
+function WasteIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4h11" />
+      <path d="M5.5 4V2.5h4V4" />
+      <path d="M3.5 4l.7 8.6a1 1 0 0 0 1 .9h5.6a1 1 0 0 0 1-.9L12.5 4" />
+      <path d="M6 6.5v4M9 6.5v4" />
     </svg>
   )
 }

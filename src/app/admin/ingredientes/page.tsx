@@ -12,6 +12,18 @@ function SearchIcon() {
   );
 }
 
+// Motivos de merma (los negativos se registran en la bitácora /admin/mermas).
+// 'otro' no aparece aquí porque su tipo debe elegirse en la página de mermas.
+const MOTIVOS_MERMA: { v: string; l: string; tipo: 'operativa' | 'financiera' }[] = [
+  { v: 'merma_natural', l: 'Merma natural (limpieza, pelado, cocción)', tipo: 'operativa' },
+  { v: 'error_cocina', l: 'Error de cocina (plato malo, quemado, comanda)', tipo: 'operativa' },
+  { v: 'vencimiento', l: 'Vencimiento o deterioro', tipo: 'operativa' },
+  { v: 'cadena_frio', l: 'Falla de cadena de frío', tipo: 'operativa' },
+  { v: 'consumo_personal', l: 'Consumo de personal no registrado', tipo: 'financiera' },
+  { v: 'cortesia', l: 'Cortesía no autorizada', tipo: 'financiera' },
+  { v: 'robo', l: 'Robo / hormigueo', tipo: 'financiera' },
+];
+
 export default function Ingredientes() {
   const [ingredientes, setIngredientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,6 +34,7 @@ export default function Ingredientes() {
   const [stockIng, setStockIng] = useState<any>(null);
   const [stockCantidad, setStockCantidad] = useState('');
   const [stockNotas, setStockNotas] = useState('');
+  const [stockMotivo, setStockMotivo] = useState('');
   const [savingStock, setSavingStock] = useState(false);
   const [q, setQ] = useState('');
 
@@ -106,6 +119,7 @@ export default function Ingredientes() {
     setStockIng(i);
     setStockCantidad('');
     setStockNotas('');
+    setStockMotivo('');
     setOpenStock(true);
   }
 
@@ -116,10 +130,27 @@ export default function Ingredientes() {
     setSavingStock(true);
     setError('');
     try {
-      await apiFetch(`/api/ingredientes/${stockIng.id}/stock`, {
-        method: 'PUT',
-        body: { cantidad: cant, notas: stockNotas.trim() }
-      });
+      const esMerma = cant < 0 && stockMotivo;
+      if (esMerma) {
+        // Cantidad negativa con motivo → va a la bitácora de mermas
+        // (descuenta stock y guarda quién, cuánto, cuánto costó y por qué).
+        const motivoDef = MOTIVOS_MERMA.find(m => m.v === stockMotivo)!;
+        await apiFetch('/api/mermas', {
+          method: 'POST',
+          body: {
+            ingrediente_id: stockIng.id,
+            cantidad: Math.abs(cant),
+            tipo: motivoDef.tipo,
+            motivo: motivoDef.v,
+            notas: stockNotas.trim(),
+          }
+        });
+      } else {
+        await apiFetch(`/api/ingredientes/${stockIng.id}/stock`, {
+          method: 'PUT',
+          body: { cantidad: cant, notas: stockNotas.trim() }
+        });
+      }
       setOpenStock(false);
       load();
     } catch (e: any) {
@@ -284,6 +315,24 @@ export default function Ingredientes() {
                 <input type="number" step="0.01" className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"
                   value={stockCantidad} onChange={(e) => setStockCantidad(e.target.value)} placeholder="Ej: 10 o -5" autoFocus />
               </div>
+              {Number(stockCantidad) < 0 && (
+                <div>
+                  <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Motivo de la pérdida *</label>
+                  <select className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"
+                    value={stockMotivo} onChange={(e) => setStockMotivo(e.target.value)}>
+                    <option value="">Seleccionar motivo...</option>
+                    <optgroup label="Pérdidas operativas (mermas y desperdicios)">
+                      {MOTIVOS_MERMA.filter(m => m.tipo === 'operativa').map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    </optgroup>
+                    <optgroup label="Pérdidas financieras (robos y hormigueo)">
+                      {MOTIVOS_MERMA.filter(m => m.tipo === 'financiera').map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    </optgroup>
+                  </select>
+                  <div className="text-[11px] text-depo-gray-3 mt-1">
+                    Se registrará en la bitácora de mermas. Si lo dejas vacío, será un ajuste manual sin registro.
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-[11px] font-medium text-depo-gray tracking-wider uppercase mb-[5px] block">Notas</label>
                 <input className="w-full bg-depo-bg border border-depo-border-2 rounded-md py-[9px] px-3 text-[13px] text-depo-dark outline-none focus:border-depo-dark focus:bg-white font-sans"

@@ -306,6 +306,34 @@ async function main() {
   const recetaGet = await req('GET', `/api/recetas/${prod1.id}`)
   check('GET receta con nombre de ingrediente', recetaGet.status === 200 && (recetaGet.data?.receta ?? []).length === 1 && recetaGet.data.receta[0].ingrediente_nombre === `Ingrediente E2E ${run}`, recetaGet.data)
 
+  console.log('== Mermas (bitácora de pérdidas) ==')
+  // Stock en este punto: 10 − 3 (ajuste anterior) = 7 · precio_unitario = 6
+  const mermaPost = await req('POST', '/api/mermas', { ingrediente_id: ingId, cantidad: 2, tipo: 'operativa', motivo: 'merma_natural', notas: 'e2e' })
+  check('registrar merma → id', mermaPost.status === 200 && !!mermaPost.data?.id, mermaPost.data)
+
+  const ingTrasMerma = await req('GET', '/api/ingredientes')
+  const ingTras = (ingTrasMerma.data?.ingredientes ?? []).find((i: any) => i.id === ingId)
+  check('merma descuenta stock → 5', Number(ingTras?.stock_actual) === 5, ingTras)
+
+  const mermaGet = await req('GET', '/api/mermas?from=2000-01-01&to=2099-12-31')
+  const mermaListada = (mermaGet.data?.mermas ?? []).find((m: any) => m.id === mermaPost.data?.id)
+  check('listar mermas → registro con ingrediente y costo 12',
+    mermaGet.status === 200 && !!mermaListada && mermaListada.ingrediente_nombre === `Ingrediente E2E ${run}` && Number(mermaListada.costo_usd) === 12,
+    mermaGet.data)
+
+  const mermaMismatch = await req('POST', '/api/mermas', { ingrediente_id: ingId, cantidad: 1, tipo: 'operativa', motivo: 'robo' })
+  check('motivo/tipo inconsistentes → 400 VALIDATION', mermaMismatch.status === 400 && mermaMismatch.data?.error === 'VALIDATION', mermaMismatch.data)
+
+  const mermaInsuf = await req('POST', '/api/mermas', { ingrediente_id: ingId, cantidad: 100, tipo: 'operativa', motivo: 'vencimiento' })
+  check('merma mayor que stock → 400 INSUFFICIENT_STOCK', mermaInsuf.status === 400 && mermaInsuf.data?.error === 'INSUFFICIENT_STOCK', mermaInsuf.data)
+
+  const mermaAnular = await req('DELETE', `/api/mermas/${mermaPost.data?.id}`)
+  check('anular merma → anulada true', mermaAnular.status === 200 && mermaAnular.data?.anulada === true, mermaAnular.data)
+
+  const ingTrasAnul = await req('GET', '/api/ingredientes')
+  const ingAnul = (ingTrasAnul.data?.ingredientes ?? []).find((i: any) => i.id === ingId)
+  check('anular merma devuelve stock → 7', Number(ingAnul?.stock_actual) === 7, ingAnul)
+
   const ingDel = await req('DELETE', `/api/ingredientes/${ingId}`)
   check('borrar ingrediente (soft)', ingDel.status === 200 && ingDel.data?.deleted === 1, ingDel.data)
 
