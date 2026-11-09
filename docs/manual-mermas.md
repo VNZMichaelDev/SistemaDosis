@@ -1,8 +1,11 @@
-# Manual — Mermas y Pérdidas (Bitácora)
+# Manual — Mermas y Pérdidas
 
 ## ¿Para qué sirve?
 
-Para saber **de dónde vienen las pérdidas del restaurante** y cuánto dinero se pierde cada día. Todo lo que se bota, se echa a perder o desaparece queda registrado con su costo, su motivo y la persona que lo registró.
+Para saber **de dónde vienen las pérdidas del restaurante** y cuánto dinero se pierde cada día. Tiene dos pantallas (pestañas):
+
+1. **Bitácora**: todo lo que se bota, se echa a perder o desaparece queda registrado con su costo, su motivo y la persona que lo registró.
+2. **Consumo y Food Cost**: compara lo que las recetas dicen que debió gastarse contra lo realmente consumido (con inventario contado) y muestra el **food cost %** del restaurante.
 
 Las pérdidas se clasifican en dos grupos:
 
@@ -84,7 +87,61 @@ Si se anotó algo por error, en la fila aparece el botón **"Anular"**:
 
 ---
 
-## Próximos pasos (pendientes)
+## Pestaña: Consumo y Food Cost (teórico vs. real)
 
-- **Consumo teórico vs. real**: comparar lo que las recetas dicen que debió gastarse contra lo realmente consumido para detectar robos, porciones excesivas y mermas no registradas.
-- **Indicadores**: food cost % (meta 28%–35% de las ventas) y ranking de ingredientes con mayor pérdida.
+Esta pantalla responde dos preguntas: **¿cuánto debió gastarse según las recetas?** y **¿cuánto se gastó de verdad?** La diferencia es dinero que no aparece en ninguna merma anotada: posibles robos, porciones excesivas o pérdidas no registradas.
+
+### Los números principales
+
+| Tarjeta | Qué significa |
+|---------|---------------|
+| **Food cost %** | Costo real de la materia prima vendida sobre las ventas. **Meta: 28%–35%**. Verde si está en meta, amarillo hasta 45%, rojo por encima. |
+| **Ventas** | Total vendido en el período seleccionado. |
+| **Costo teórico** | Lo que las recetas dicen que debió gastarse (recetas × ventas). |
+| **Mermas anotadas** | Lo que ya quedó registrado en la bitácora (fase A). |
+| **No registrado** | Lo que **falta** contra el conteo físico: pérdida invisible. En rojo si hay faltante, en verde si está en cero. |
+| **Compras** | Facturas de proveedor del período (materia prima comprada). |
+
+También verás el **ranking de mayores pérdidas** (mermas + faltante, de mayor a menor) y la tabla **Consumo por ingrediente** con las columnas:
+
+- **Teórico**: cantidad y costo que debió gastarse según la receta.
+- **Mermas**: lo anotado en la bitácora.
+- **Conteo**: lo que se contó físicamente en el último cierre.
+- **Stock sistema**: lo que el sistema cree que hay.
+- **Diferencia**: stock sistema − conteo. **Positivo (rojo) = falta material**; negativo (ámbar) = sobró conteo; cero (verde) = todo cuadra.
+- **Real**: teórico + mermas + diferencia = lo que realmente salió del inventario.
+- **Estado**: OK / Falta / Sobra / Sin conteo.
+
+### El conteo de cierre (paso obligatorio)
+
+La comparación solo funciona si existe un **conteo físico del inventario**. Sin conteo, la pantalla avisa: *"Falta el inventario contado…"*.
+
+1. Botón **"+ Conteo de cierre"** (o "Registrar conteo" en el aviso).
+2. **Primero** registra en el sistema las compras y mermas del día.
+3. Elige la **fecha del conteo** y escribe en la columna **Contado** lo que realmente hay en almacén de cada ingrediente (viene pre-llenado con el stock del sistema: solo corrige las diferencias).
+   - Si el contado es **menor** que el sistema, la celda se marca en rojo (falta material).
+4. **"Guardar conteo"** → si vuelves a contar el mismo día, el sistema reemplaza el anterior.
+
+### Ejemplo completo
+
+> Al cierre de mes: las recetas dicen que se debieron gastar **$800** en ingredientes; en la bitácora se anotaron **$40** de mermas; el conteo físico muestra **$60 menos** de lo que el sistema dice tener.
+> - No registrado = **$60** → posible robo o pérdida no anotada.
+> - Real = 800 + 40 + 60 = **$900**.
+> - Si en el mes se vendió $3.000, food cost % = 900 / 3.000 = **30%** → en meta ✅
+
+### Buena práctica
+
+- Hacer el conteo **al cierre del mes** (o de la semana), siempre **después** de registrar compras y mermas del día.
+- Revisar primero el **ranking de mayores pérdidas**: ahí están los ingredientes donde conviene cuidar más.
+- Un food cost por encima de **45%** es una alerta: revisar porciones, recetas y mermas sin anotar.
+
+---
+
+## Roles
+
+| Acción | admin | encargado |
+|--------|:-----:|:---------:|
+| Registrar mermas | ✅ | ✅ |
+| Anular mermas | ✅ | ❌ |
+| Ver consumo y food cost | ✅ | ✅ |
+| Registrar conteo de cierre | ✅ | ✅ |

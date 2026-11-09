@@ -334,6 +334,48 @@ async function main() {
   const ingAnul = (ingTrasAnul.data?.ingredientes ?? []).find((i: any) => i.id === ingId)
   check('anular merma devuelve stock → 7', Number(ingAnul?.stock_actual) === 7, ingAnul)
 
+  console.log('== Consumo teórico vs. real + conteo (fase B/C) ==')
+  const hoy = new Date().toISOString().slice(0, 10)
+
+  const consumo1 = await req('GET', '/api/consumo?from=2000-01-01&to=2099-12-31')
+  const row1 = (consumo1.data?.ingredientes ?? []).find((r: any) => r.ingrediente_id === ingId)
+  check('GET /consumo → estructura con ingrediente',
+    consumo1.status === 200 && Array.isArray(consumo1.data?.ingredientes) && typeof consumo1.data?.ventas_total === 'number' && !!row1,
+    consumo1.data)
+  check('reporte muestra stock 7', !!row1 && Number(row1.stock_actual) === 7, row1)
+
+  const consumoBad = await req('GET', '/api/consumo?from=bad&to=bad')
+  check('fechas inválidas → 400 VALIDATION', consumoBad.status === 400 && consumoBad.data?.error === 'VALIDATION', consumoBad.data)
+
+  // Conteo: hay 7 en sistema pero se contó 6 → falta 1 (=$6) sin registrar
+  const conteoPost = await req('POST', '/api/conteos', { fecha: hoy, items: [{ ingrediente_id: ingId, cantidad: 6 }] })
+  check('guardar conteo → guardados 1', conteoPost.status === 200 && conteoPost.data?.guardados === 1, conteoPost.data)
+
+  const conteoGet = await req('GET', `/api/conteos?fecha=${hoy}`)
+  check('listar conteos del día', conteoGet.status === 200 && (conteoGet.data?.conteos ?? []).some((c: any) => c.ingrediente_id === ingId && Number(c.cantidad) === 6), conteoGet.data)
+
+  const consumo2 = await req('GET', '/api/consumo?from=2000-01-01&to=2099-12-31')
+  const row2 = (consumo2.data?.ingredientes ?? []).find((r: any) => r.ingrediente_id === ingId)
+  check('diferencia = 7 − 6 = +1 (falta $6)',
+    !!row2 && Number(row2.diferencia_cant) === 1 && Number(row2.diferencia_costo) === 6,
+    row2)
+  check('pérdida no registrada ≥ $6', Number(consumo2.data?.perdida_costo) >= 6, consumo2.data?.perdida_costo)
+  check('food cost numérico o null sin ventas', consumo2.data?.food_cost_pct == null || typeof consumo2.data?.food_cost_pct === 'number', consumo2.data?.food_cost_pct)
+
+  // Recontar el mismo día reemplaza (upsert) → diferencia 0
+  const conteoPost2 = await req('POST', '/api/conteos', { fecha: hoy, items: [{ ingrediente_id: ingId, cantidad: 7 }] })
+  check('recontar reemplaza el conteo', conteoPost2.status === 200 && conteoPost2.data?.guardados === 1, conteoPost2.data)
+
+  const consumo3 = await req('GET', '/api/consumo?from=2000-01-01&to=2099-12-31')
+  const row3 = (consumo3.data?.ingredientes ?? []).find((r: any) => r.ingrediente_id === ingId)
+  check('diferencia 0 tras recontar', !!row3 && Number(row3.diferencia_cant) === 0, row3)
+
+  const conteoEmpty = await req('POST', '/api/conteos', { fecha: hoy, items: [] })
+  check('conteo sin items → 400 VALIDATION', conteoEmpty.status === 400 && conteoEmpty.data?.error === 'VALIDATION', conteoEmpty.data)
+
+  const conteoDel = await req('DELETE', `/api/conteos/${hoy}`)
+  check('borrar conteos del día (limpieza)', conteoDel.status === 200, conteoDel.data)
+
   const ingDel = await req('DELETE', `/api/ingredientes/${ingId}`)
   check('borrar ingrediente (soft)', ingDel.status === 200 && ingDel.data?.deleted === 1, ingDel.data)
 
