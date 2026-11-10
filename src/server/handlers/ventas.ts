@@ -111,7 +111,15 @@ post('/ventas', async ({ body, session }) => {
     p_items: parsed.data.items,
     p_pagos: parsed.data.pagos ?? [],
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // Sin stock: la RPC rechaza la venta completa y lista los ingredientes
+    const msg = error.message || ''
+    if (msg.includes('SIN_STOCK')) {
+      const detail = msg.split('SIN_STOCK:').pop()!.trim()
+      return apiError(409, 'INSUFFICIENT_STOCK', { detail })
+    }
+    throw new Error(msg)
+  }
 
   // ---- Notificar tiempo real ----
   if (parsed.data.pedido_id) {

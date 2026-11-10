@@ -394,7 +394,10 @@ function CheckoutModal({ pedido, items, totalUsd, totalBs, tasa, onClose, onSucc
       onSuccess();
       onClose();
     } catch (e: any) {
-      alert('Error: ' + (e.data?.error || e.message));
+      const err = e.data?.error;
+      alert(err === 'INSUFFICIENT_STOCK'
+        ? 'Sin stock para esta venta:\n' + (e.data?.detail || 'falta ingrediente')
+        : 'Error: ' + (err || e.message));
     }
     setSending(false);
   }
