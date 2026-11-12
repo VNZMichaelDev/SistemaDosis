@@ -40,6 +40,8 @@ En el menú lateral de admin → **Traslados** (ícono de flechas ⇄).
 4. El **Sub-Total** se calcula en tiempo real abajo de la tabla.
 5. Botón **"Guardar Factura"** → se crea con número automático (FT-001, FT-002, …) y se abre la vista de la factura.
 
+> **Inventario:** al guardar, el sistema **descuenta el stock** de lo enviado: si elegiste un *Ingrediente*, baja directamente su stock; si elegiste un *Producto con receta*, bajan los ingredientes de su receta. Si falta material, **no se crea la factura** y aparece el aviso *"Sin stock para este traslado: …"* indicando qué ingrediente y cuánto falta. Los items escritos a mano ("— Manual —") no mueven stock.
+
 ---
 
 ## Ver una factura y descargar el PDF
@@ -58,7 +60,7 @@ En el menú lateral de admin → **Traslados** (ícono de flechas ⇄).
 
 ## Eliminar una factura
 
-En la lista de Traslados, botón rojo **"Eliminar"** (solo admin). Pide confirmación antes de borrar. Se elimina la factura y todos sus items.
+En la lista de Traslados, botón rojo **"Eliminar"** (solo admin). Pide confirmación antes de borrar. Se elimina la factura, sus items y **se devuelve al inventario el stock que había descontado**.
 
 ---
 
@@ -80,4 +82,4 @@ Admin y Encargado. Solo admin puede eliminar.
 Escribe la descripción a mano con el precio que necesites (selector "— Manual —").
 
 **¿Se descuenta el inventario automáticamente?**
-No. Estas facturas son un registro de traslado, no mueven stock. El inventario se lleva aparte en Contabilidad → Inventario.
+Sí. Al guardar la factura baja el stock (del ingrediente elegido o de los ingredientes de la receta del producto). Si no hay stock suficiente no se guarda y te avisa qué falta. Al eliminar la factura (admin), el stock vuelve.

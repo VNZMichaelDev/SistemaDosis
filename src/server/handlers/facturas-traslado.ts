@@ -7,6 +7,7 @@ const schemaItem = z.object({
   cantidad: z.number().positive(),
   precio_unitario: z.number().nonnegative(),
   producto_id: z.number().nullable().optional(),
+  ingrediente_id: z.number().int().positive().nullable().optional(),
 })
 
 const schemaFactura = z.object({
@@ -46,6 +47,7 @@ post('/facturas-traslado', async ({ body, session }) => {
     precio_unitario: it.precio_unitario,
     importe: Math.round(it.cantidad * it.precio_unitario * 100) / 100,
     producto_id: it.producto_id ?? null,
+    ingrediente_id: it.ingrediente_id ?? null,
   }))
   const subtotal = Math.round(itemsLimpios.reduce((s, i) => s + i.importe, 0) * 100) / 100
 
@@ -62,29 +64,35 @@ post('/facturas-traslado', async ({ body, session }) => {
   }
   const numero = `FT-${String(seq).padStart(3, '0')}`
 
-  const { data: factura, error: errFac } = await supabaseAdmin()
-    .from('facturas_traslado')
-    .insert({
-      numero,
-      destinatario: destinatario.trim(),
-      direccion: direccion.trim(),
-      rif: rif.trim(),
-      fecha: fecha || new Date().toISOString().slice(0, 10),
-      subtotal,
-      total: subtotal,
-      notas: notas.trim(),
-      usuario_id: session.userId,
-    })
-    .select('id, numero')
-    .single()
-  if (errFac) return apiError(500, 'DB_ERROR', { detail: errFac.message })
+  // RPC transaccional: valida stock → inserta factura + items → descuenta recetas.
+  // Si falta material hace rollback total y lanza SIN_STOCK con el detalle.
+  const itemsRpc = itemsLimpios.map((i) => ({
+    descripcion: i.descripcion,
+    cantidad: i.cantidad,
+    precio_unitario: i.precio_unitario,
+    importe: i.importe,
+    producto_id: i.producto_id,
+    ingrediente_id: i.ingrediente_id,
+  }))
+  const { data: facturaId, error: errFac } = await supabaseAdmin().rpc('crear_factura_traslado', {
+    p_numero: numero,
+    p_destinatario: destinatario.trim(),
+    p_direccion: direccion.trim(),
+    p_rif: rif.trim(),
+    p_fecha: fecha || new Date().toISOString().slice(0, 10),
+    p_notas: notas.trim(),
+    p_items: itemsRpc,
+    p_usuario_id: session.userId,
+  })
+  if (errFac) {
+    const msg = errFac.message || ''
+    if (msg.includes('SIN_STOCK')) {
+      return apiError(409, 'INSUFFICIENT_STOCK', { detail: msg.split('SIN_STOCK:').pop()!.trim() })
+    }
+    return apiError(500, 'DB_ERROR', { detail: msg })
+  }
 
-  const { error: errItems } = await supabaseAdmin()
-    .from('facturas_traslado_items')
-    .insert(itemsLimpios.map((i) => ({ ...i, factura_id: factura.id })))
-  if (errItems) return apiError(500, 'DB_ERROR', { detail: errItems.message })
-
-  return json({ id: factura.id, numero: factura.numero, subtotal, total: subtotal }, 201)
+  return json({ id: facturaId, numero, subtotal, total: subtotal }, 201)
 })
 
 get('/facturas-traslado/:id', async ({ params }) => {
@@ -108,8 +116,12 @@ del('/facturas-traslado/:id', async ({ params, session }) => {
   if (session.rol !== 'admin') return apiError(403, 'FORBIDDEN')
   const id = Number(params.id)
   if (!Number.isFinite(id)) return apiError(400, 'BAD_REQUEST')
-  const { error } = await supabaseAdmin().from('facturas_traslado').delete().eq('id', id)
-  if (error) return apiError(500, 'DB_ERROR', { detail: error.message })
+  // Devuelve el stock descontado y borra la factura (transaccional)
+  const { error } = await supabaseAdmin().rpc('anular_factura_traslado', { p_id: id })
+  if (error) {
+    if ((error.message || '').includes('TRASLADO_NOT_FOUND')) return notFound()
+    return apiError(500, 'DB_ERROR', { detail: error.message })
+  }
   return json({ ok: true })
 })
 

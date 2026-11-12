@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client'
 
 interface Item {
   producto_id: number | null
+  ingrediente_id: number | null
   descripcion: string
   cantidad: string
   precio_unitario: string
@@ -32,7 +33,7 @@ export default function NuevaFacturaTrasladoPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
   const [notas, setNotas] = useState('')
-  const [items, setItems] = useState<Item[]>([{ producto_id: null, descripcion: '', cantidad: '1', precio_unitario: '' }])
+  const [items, setItems] = useState<Item[]>([{ producto_id: null, ingrediente_id: null, descripcion: '', cantidad: '1', precio_unitario: '' }])
   const [productos, setProductos] = useState<any[]>([])
   const [ingredientes, setIngredientes] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
@@ -66,7 +67,7 @@ export default function NuevaFacturaTrasladoPage() {
   const subtotal = items.reduce((s, it) => s + importeDe(it), 0)
 
   function addItem() {
-    setItems([...items, { producto_id: null, descripcion: '', cantidad: '1', precio_unitario: '' }])
+    setItems([...items, { producto_id: null, ingrediente_id: null, descripcion: '', cantidad: '1', precio_unitario: '' }])
   }
 
   function removeItem(i: number) {
@@ -80,7 +81,7 @@ export default function NuevaFacturaTrasladoPage() {
 
   function pickProducto(i: number, key: string) {
     if (!key) {
-      updateItem(i, { producto_id: null })
+      updateItem(i, { producto_id: null, ingrediente_id: null })
       return
     }
     if (key.startsWith('ing-')) {
@@ -89,6 +90,7 @@ export default function NuevaFacturaTrasladoPage() {
       if (!ing) return
       updateItem(i, {
         producto_id: null,
+        ingrediente_id: ingId,
         descripcion: `${ing.nombre} (${ing.unidad})`,
         precio_unitario: String(ing.precio_unitario || ''),
       })
@@ -99,6 +101,7 @@ export default function NuevaFacturaTrasladoPage() {
     if (!p) return
     updateItem(i, {
       producto_id: Number(p.id),
+      ingrediente_id: null,
       descripcion: p.nombre,
       precio_unitario: String(p.precio_costo > 0 ? p.precio_costo : p.precio_usd),
     })
@@ -117,6 +120,7 @@ export default function NuevaFacturaTrasladoPage() {
         cantidad: parseFloat(it.cantidad) || 0,
         precio_unitario: parseFloat(it.precio_unitario) || 0,
         producto_id: it.producto_id,
+        ingrediente_id: it.ingrediente_id,
       }))
     if (itemsLimpios.length === 0) {
       setError('Agrega al menos un item con descripción y cantidad')
@@ -130,7 +134,10 @@ export default function NuevaFacturaTrasladoPage() {
       })
       router.push(`/admin/facturas-traslado/${res.id}`)
     } catch (e: any) {
-      setError(e?.data?.message || e?.data?.error || 'Error al guardar')
+      const err = e?.data?.error
+      setError(err === 'INSUFFICIENT_STOCK'
+        ? 'Sin stock para este traslado: ' + (e?.data?.detail || 'falta ingrediente')
+        : e?.data?.message || err || 'Error al guardar')
       setSaving(false)
     }
   }
@@ -233,7 +240,7 @@ export default function NuevaFacturaTrasladoPage() {
                   <tr key={i} className="border-b border-[#F5F3EE]">
                     <td className="px-3 md:px-4 py-2">
                       <select
-                        value={it.producto_id != null ? `prod-${it.producto_id}` : (it.descripcion ? catalogo.find((c) => c.nombre === it.descripcion)?.key || '' : '')}
+                        value={it.producto_id != null ? `prod-${it.producto_id}` : it.ingrediente_id != null ? `ing-${it.ingrediente_id}` : (it.descripcion ? catalogo.find((c) => c.nombre === it.descripcion)?.key || '' : '')}
                         onChange={(e) => pickProducto(i, e.target.value)}
                         className="w-full border border-depo-border-2 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#E8E04A]"
                       >
