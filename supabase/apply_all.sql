@@ -1526,6 +1526,8 @@ $$;
 -- ============================================================
 
 -- ============================================================
+
+-- ============================================================
 -- 0021_TRASLADO_STOCK.SQL
 -- ============================================================
 -- ============================================================
@@ -1572,15 +1574,15 @@ begin
       select k.id, k.nombre, k.unidad, sum(k.cant) - k.stock_actual as falta
         from (
           select i.id, i.nombre, i.unidad, i.stock_actual,
-                 sum((it->>'cantidad')::double precision) as cant
-            from jsonb_array_elements(p_items) as it
-            join ingredientes i on i.id = (it->>'ingrediente_id')::bigint
+                 sum((e1->>'cantidad')::double precision) as cant
+            from jsonb_array_elements(p_items) as e1
+            join ingredientes i on i.id = (e1->>'ingrediente_id')::bigint
            group by i.id, i.nombre, i.unidad, i.stock_actual
           union all
           select i.id, i.nombre, i.unidad, i.stock_actual,
-                 sum(ri.cantidad * (it->>'cantidad')::double precision) as cant
-            from jsonb_array_elements(p_items) as it2
-            join productos p2 on p2.id = (it2->>'producto_id')::bigint
+                 sum(ri.cantidad * (e2->>'cantidad')::double precision) as cant
+            from jsonb_array_elements(p_items) as e2
+            join productos p2 on p2.id = (e2->>'producto_id')::bigint
                           and coalesce(p2.es_receta, false)
             join receta_ingredientes ri on ri.producto_id = p2.id
             join ingredientes i on i.id = ri.ingrediente_id

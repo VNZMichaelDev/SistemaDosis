@@ -137,7 +137,7 @@ export default function NuevaFacturaTrasladoPage() {
       const err = e?.data?.error
       setError(err === 'INSUFFICIENT_STOCK'
         ? 'Sin stock para este traslado: ' + (e?.data?.detail || 'falta ingrediente')
-        : e?.data?.message || err || 'Error al guardar')
+        : e?.data?.detail || e?.data?.message || err || 'Error al guardar')
       setSaving(false)
     }
   }
