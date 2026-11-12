@@ -37,6 +37,8 @@ export default function TomarPedidoPage() {
   const [activePedido, setActivePedido] = useState<any>(null);
   const [activeMesaIds, setActiveMesaIds] = useState<any>(() => new Set());
   const [toast, setToast] = useState<any>(null);
+  // Consulta de stock al momento de tomar el pedido (no espera a facturar)
+  const [stockCheck, setStockCheck] = useState<{ ok: boolean; detalle: string; productos: Record<number, string> }>({ ok: true, detalle: '', productos: {} });
   const activePedidoRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
   const audioCtxRef = useRef<any>(null);
@@ -168,6 +170,20 @@ export default function TomarPedidoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMesa]);
 
+  // Cada vez que cambia el carrito, consulta si alcanza el stock de ingredientes
+  useEffect(() => {
+    if (cart.length === 0) { setStockCheck({ ok: true, detalle: '', productos: {} }); return; }
+    const t = setTimeout(() => {
+      apiFetch('/api/stock/verificar', {
+        method: 'POST',
+        body: { items: cart.map((i) => ({ producto_id: i.producto_id, cantidad: i.cantidad })) },
+      })
+        .then((d) => setStockCheck({ ok: !!d.ok, detalle: d.detalle || '', productos: d.productos || {} }))
+        .catch(() => { /* sin red no bloqueamos */ });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [cart]);
+
   const filtered = productos.filter((p) => {
     if (deptFilter && p.departamento_id !== deptFilter) return false;
     if (!search) return true;
@@ -250,7 +266,10 @@ export default function TomarPedidoPage() {
       setTimeout(() => setToast(null), 3000);
     } catch (e: any) {
       const msg = e?.message || '';
-      if (msg.includes('PEDIDO_FACTURADO') || msg.includes('PEDIDO_CANCELADO')) {
+      if (e?.data?.error === 'INSUFFICIENT_STOCK') {
+        setStockCheck((s) => ({ ...s, ok: false, detalle: e.data.detail || 'falta ingrediente' }));
+        setToast('⛔ Sin stock: ' + (e.data.detail || 'falta ingrediente'));
+      } else if (msg.includes('PEDIDO_FACTURADO') || msg.includes('PEDIDO_CANCELADO')) {
         setCart([]);
         setShowCart(false);
         try { sessionStorage.removeItem('depos_cart'); } catch { /* */ }
@@ -393,6 +412,9 @@ export default function TomarPedidoPage() {
                 <div className="flex-1 min-w-0">
                   <div className="text-white text-[13px] font-semibold truncate">{item.nombre}</div>
                   <div className="text-[12px] font-mono text-depo-yellow">{formatUSD(item.precio_usd)}</div>
+                  {stockCheck.productos[item.producto_id] && (
+                    <div className="text-[11px] text-red-400 font-semibold mt-0.5">⚠ Sin stock: {stockCheck.productos[item.producto_id]}</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => { if (item.cantidad <= 1) removeFromCart(item.producto_id); else updateQty(item.producto_id, -1); }}
@@ -427,6 +449,11 @@ export default function TomarPedidoPage() {
           </div>
 
             <div className="shrink-0 p-3 border-t border-depo-dark-2 space-y-2 bg-depo-dark-5 pb-[max(12px,env(safe-area-inset-bottom))]">
+              {!stockCheck.ok && (
+                <div className="rounded-xl bg-red-600/20 border border-red-500/60 px-3 py-2 text-[12px] text-red-300 font-semibold leading-snug">
+                  ⛔ No se puede enviar — {stockCheck.detalle}
+                </div>
+              )}
               <div className="flex justify-between text-white text-[13px]">
                 <span className="text-depo-gray">Total Bs</span>
                 <span className="font-mono font-bold text-[15px]">Bs {formatBS(totalBs)}</span>

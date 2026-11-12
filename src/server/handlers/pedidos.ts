@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase'
 import { broadcast } from '../realtime'
-import { conflict, del, get, json, notFound, post, put, VALIDATION } from '../router'
+import { conflict, del, get, json, notFound, post, put, VALIDATION, apiError } from '../router'
 
 const itemSchema = z.object({
   producto_id: z.number().int().positive(),
@@ -43,6 +43,96 @@ async function fetchPedido(id: number) {
   return data
 }
 
+// ============ CONSULTA DE STOCK AL TOMAR EL PEDIDO ============
+// Compara lo que pide el carrito contra el stock de los ingredientes
+// de las recetas, ANTES de mandar la orden a cocina (no se espera a facturar).
+
+type ItemStock = { producto_id: number; cantidad: number }
+
+/**
+ * Detalle de lo que falta, agregando los ingredientes de las recetas de los
+ * productos pedidos. `null` = hay stock suficiente.
+ *   → "Carne de res: falta 1.5 kg; Aceite: falta 0.5 l"
+ */
+async function faltantesStock(items: ItemStock[]): Promise<string | null> {
+  const mapa = await mapaFaltantes(items)
+  const faltas = Object.values(mapa.productos).filter((d) => d)
+  // También lo que falta sumando todos los productos entre sí
+  const global = Object.entries(mapa.total)
+    .filter(([, v]) => v.falta > 0.0005)
+    .map(([, v]) => `${v.nombre}: falta ${Math.round(v.falta * 1000) / 1000} ${v.unidad}`)
+  const unicos = [...new Set([...faltas, ...global])]
+  return unicos.length ? unicos.join('; ') : null
+}
+
+/** Devuelve el detalle por producto (para marcar en el carrito) y el total. */
+async function mapaFaltantes(items: ItemStock[]) {
+  const db = supabaseAdmin()
+  const porProducto: Record<number, string> = {}
+  const total: Record<number, { nombre: string; unidad: string; falta: number }> = {}
+
+  const ids = [...new Set(items.map((i) => i.producto_id))]
+  if (ids.length === 0) return { productos: porProducto, total }
+
+  const { data: prods } = await db.from('productos').select('id, es_receta').in('id', ids)
+  const recetaIds = (prods ?? []).filter((p: any) => p.es_receta).map((p: any) => p.id)
+  if (recetaIds.length === 0) return { productos: porProducto, total }
+
+  const { data: ri } = await db
+    .from('receta_ingredientes')
+    .select('producto_id, ingrediente_id, cantidad, ingredientes(nombre, unidad, stock_actual)')
+    .in('producto_id', recetaIds)
+
+  for (const row of ri ?? []) {
+    const ing = row.ingredientes as any
+    if (!ing) continue
+    const cantPedida = items
+      .filter((i) => i.producto_id === row.producto_id)
+      .reduce((s, i) => s + i.cantidad, 0)
+    if (cantPedida <= 0) continue
+
+    const requerido = row.cantidad * cantPedida
+    const stock = Number(ing.stock_actual || 0)
+    const falta = Math.round((requerido - stock) * 1000) / 1000
+
+    // Total agregado por ingrediente (varios productos pueden usar el mismo)
+    const t = total[row.ingrediente_id]
+    total[row.ingrediente_id] = {
+      nombre: ing.nombre,
+      unidad: ing.unidad,
+      falta: (t?.falta ?? 0) + Math.max(0, falta),
+    }
+
+    // Detalle por producto individual
+    if (falta > 0.0005 && !porProducto[row.producto_id]) {
+      porProducto[row.producto_id] = `${ing.nombre}: falta ${falta} ${ing.unidad}`
+    }
+  }
+  return { productos: porProducto, total }
+}
+
+// POST /stock/verificar  { items: [{producto_id, cantidad}] }
+// → { ok, detalle, productos: { [producto_id]: "Ingrediente: falta X unidad" } }
+post('/stock/verificar', async ({ body }) => {
+  const schema = z.object({
+    items: z
+      .array(z.object({ producto_id: z.number().int().positive(), cantidad: z.number().positive() }))
+      .min(1),
+  })
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) return VALIDATION()
+
+  const mapa = await mapaFaltantes(parsed.data.items)
+  const faltas = [
+    ...Object.values(mapa.productos).filter(Boolean),
+    ...Object.entries(mapa.total)
+      .filter(([, v]) => v.falta > 0.0005)
+      .map(([, v]) => `${v.nombre}: falta ${Math.round(v.falta * 1000) / 1000} ${v.unidad}`),
+  ]
+  const detalle = [...new Set(faltas)].join('; ')
+  return json({ ok: !detalle, detalle, productos: mapa.productos })
+})
+
 // ============ CREAR PEDIDO ============
 
 post('/pedidos', async ({ body, session }) => {
@@ -55,6 +145,10 @@ post('/pedidos', async ({ body, session }) => {
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return VALIDATION()
+
+  // Sin stock no se toma el pedido: se avisa antes de mandar a cocina
+  const faltan = await faltantesStock(parsed.data.items)
+  if (faltan) return apiError(409, 'INSUFFICIENT_STOCK', { detail: faltan })
 
   const db = supabaseAdmin()
 
@@ -105,6 +199,10 @@ post('/pedidos/:id/items', async ({ params, body }) => {
   const schema = z.object({ items: z.array(itemSchema).min(1) })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return VALIDATION()
+
+  // Mismo control de stock al agregar productos a un pedido abierto
+  const faltanItems = await faltantesStock(parsed.data.items)
+  if (faltanItems) return apiError(409, 'INSUFFICIENT_STOCK', { detail: faltanItems })
 
   const db = supabaseAdmin()
   const { data: pedido } = await db.from('pedidos').select('id, estado, cancelado').eq('id', id).maybeSingle()
